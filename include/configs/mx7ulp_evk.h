@@ -157,4 +157,7 @@
 #define CONFIG_CMD_CACHE
 #endif
 
+/* USB Configs */
+#define CONFIG_MXC_USB_PORTSC  (PORT_PTS_UTMI | PORT_PTS_PTW)
+
 #endif	/* __CONFIG_H */

@@ -10,10 +10,14 @@
 #include <asm/arch/mx7ulp-pins.h>
 #include <asm/arch/iomux.h>
 #include <asm/mach-imx/boot_mode.h>
+#include <asm/gpio.h>
+#include <usb.h>
+#include <dm.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
 #define UART_PAD_CTRL	(PAD_CTL_PUS_UP)
+#define OTG_ID_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE)
 
 int dram_init(void)
 {
@@ -33,6 +37,37 @@ static void setup_iomux_uart(void)
 					 ARRAY_SIZE(lpuart4_pads));
 }
 
+#ifdef CONFIG_DM_USB
+static iomux_cfg_t const usb_otg1_pads[] = {
+	MX7ULP_PAD_PTC8__PTC8 | MUX_PAD_CTRL(OTG_ID_GPIO_PAD_CTRL),  /* gpio for OTG ID*/
+};
+
+static void setup_usb(void)
+{
+	mx7ulp_iomux_setup_multiple_pads(usb_otg1_pads,
+						 ARRAY_SIZE(usb_otg1_pads));
+
+	gpio_request(IMX_GPIO_NR(3, 8), "otg_id");
+	gpio_direction_input(IMX_GPIO_NR(3, 8));
+}
+
+int board_ehci_usb_phy_mode(struct udevice *dev)
+{
+	int ret = 0;
+
+	if (devfdt_get_addr(dev) == USBOTG0_RBASE) {
+		ret = gpio_get_value(IMX_GPIO_NR(3, 8));
+
+		if (ret)
+			return USB_INIT_DEVICE;
+		else
+			return USB_INIT_HOST;
+	}
+
+	return USB_INIT_HOST;
+}
+#endif
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -44,6 +79,10 @@ int board_init(void)
 {
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
+
+#ifdef CONFIG_DM_USB
+	setup_usb();
+#endif
 
 	return 0;
 }
