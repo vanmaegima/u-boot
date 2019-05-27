@@ -477,6 +477,7 @@ static int imx_lpi2c_probe(struct udevice *bus)
 			dev_err(bus, "Failed to get ipg clk\n");
 			return ret;
 		}
+
 		ret = clk_enable(&i2c_bus->ipg_clk);
 		if (ret) {
 			dev_err(bus, "Failed to enable ipg clk\n");
