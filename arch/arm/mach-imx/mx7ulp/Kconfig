@@ -6,6 +6,11 @@ config SYS_SOC
 config MX7ULP
 	bool
 
+config LDO_ENABLED_MODE
+	bool "i.MX7ULP LDO Enabled Mode"
+	help
+	  Select this option to enable the PMC1 LDO.
+
 choice
 	prompt "MX7ULP board select"
 	optional
