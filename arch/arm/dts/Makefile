@@ -633,7 +633,8 @@ dtb-$(CONFIG_MX7) += imx7d-sdb.dtb \
 	imx7d-pico-hobbit.dtb
 
 
-dtb-$(CONFIG_ARCH_MX7ULP) += imx7ulp-evk.dtb
+dtb-$(CONFIG_ARCH_MX7ULP) += imx7ulp-evk.dtb \
+	imx7ulpea-ucom-kit_v2.dtb
 
 dtb-$(CONFIG_ARCH_IMX8) += \
 	fsl-imx8qm-apalis.dtb \
