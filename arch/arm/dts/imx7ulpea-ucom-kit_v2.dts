@@ -9,6 +9,7 @@
 /dts-v1/;
 
 #include "imx7ulp.dtsi"
+#include "imx7ulpea-ucom-kit_v2-u-boot.dtsi"
 
 / {
 	model = "Embedded Artists i.MX7ULP uCOM Kit";
