@@ -3,13 +3,16 @@ if ARCH_MX7ULP
 config SYS_SOC
 	default "mx7ulp"
 
+config MX7ULP
+	select ARCH_SUPPORT_PSCI
+	select CPU_V7_HAS_NONSEC
+	select CPU_V7_HAS_VIRT
+	bool
+
 config LDO_ENABLED_MODE
 	bool "i.MX7ULP LDO Enabled Mode"
 	help
 	  Select this option to enable the PMC1 LDO.
-
-config MX7ULP
-	bool
 
 choice
 	prompt "MX7ULP board select"
@@ -23,6 +26,19 @@ config TARGET_MX7ULP_EVK
 config TARGET_MX7ULPEA_UCOM
 	bool "Support EA mx7ulp uCOM board"
 	select MX7ULP
+	select SPL
+	select SPL_DM if SPL
+	select SPL_GPIO_SUPPORT if SPL
+	select SPL_LIBCOMMON_SUPPORT if SPL
+	select SPL_LIBDISK_SUPPORT if SPL
+	select SPL_LIBGENERIC_SUPPORT if SPL
+	select SPL_MMC_SUPPORT if SPL
+	select SPL_OF_CONTROL if SPL
+	select SPL_OF_LIBFDT if SPL
+	select SPL_PINCTRL if SPL
+	select SPL_SEPARATE_BSS if SPL
+	select SPL_SERIAL_SUPPORT if SPL
+	select SUPPORT_SPL
 
 endchoice
 
