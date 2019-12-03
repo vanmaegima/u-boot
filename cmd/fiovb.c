@@ -42,6 +42,8 @@ int do_fiovb_read_pvalue(cmd_tbl_t *cmdtp, int flag, int argc,
 	size_t bytes_read;
 	void *buffer;
 	char *endp;
+	char fiovb_name[20] = { 0 }; /* fiovb.name */
+	char fiovb_val[32] = { 0 };
 
 	if (!fiovb_ops) {
 		printf("Foundries.IO Verified Boot is not initialized, run 'fiovb init' first\n");
@@ -64,6 +66,10 @@ int do_fiovb_read_pvalue(cmd_tbl_t *cmdtp, int flag, int argc,
 					   &bytes_read) == FIOVB_IO_RESULT_OK) {
 		printf("Read %zu bytes, value = %s\n", bytes_read,
 		       (char *)buffer);
+		/* Mirror fiovb variables into the environment */
+		snprintf(fiovb_name, sizeof(fiovb_name), "fiovb.%s", name);
+		snprintf(fiovb_val, sizeof(fiovb_val), "%s", (char *)buffer);
+		env_set(fiovb_name, fiovb_val);
 		free(buffer);
 		return CMD_RET_SUCCESS;
 	}
@@ -80,6 +86,7 @@ int do_fiovb_write_pvalue(cmd_tbl_t *cmdtp, int flag, int argc,
 {
 	const char *name;
 	const char *value;
+	char fiovb_name[20] = { 0 }; /* fiovb.name */
 
 	if (!fiovb_ops) {
 		printf("Foundries.IO Verified Boot is not initialized, run 'fiovb init' first\n");
@@ -96,6 +103,8 @@ int do_fiovb_write_pvalue(cmd_tbl_t *cmdtp, int flag, int argc,
 					    (const uint8_t *)value) ==
 	    FIOVB_IO_RESULT_OK) {
 		printf("Wrote %zu bytes\n", strlen(value) + 1);
+		snprintf(fiovb_name, sizeof(fiovb_name), "fiovb.%s", name);
+		env_set(fiovb_name, value);
 		return CMD_RET_SUCCESS;
 	}
 
