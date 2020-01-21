@@ -165,6 +165,8 @@ static bool ldo_mode_is_enabled(void)
 	else
 		return false;
 }
+
+#if !defined(CONFIG_SPL) || (defined(CONFIG_SPL) && defined(CONFIG_SPL_BUILD))
 #if defined(CONFIG_LDO_ENABLED_MODE)
 static void init_ldo_mode(void)
 {
@@ -225,6 +227,7 @@ void s_init(void)
 #endif
 	return;
 }
+#endif
 
 #if !defined(CONFIG_ULP_WATCHDOG) || defined(CONFIG_SPL_BUILD)
 void reset_cpu(ulong addr)
