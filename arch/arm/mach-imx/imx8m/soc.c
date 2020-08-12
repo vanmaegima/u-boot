@@ -197,6 +197,7 @@ void enable_caches(void)
 	dcache_enable();
 }
 
+#ifndef CONFIG_IMX8M_BOARD_INIT_DRAM
 __weak int board_phys_sdram_size(phys_size_t *bank1_size, phys_size_t *bank2_size)
 {
 	if (!bank1_size || !bank2_size)
@@ -288,6 +289,7 @@ phys_size_t get_effective_memsize(void)
 
 	return sdram1_size;
 }
+#endif
 
 static u32 get_cpu_variant_type(u32 type)
 {
