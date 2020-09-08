@@ -9,6 +9,7 @@
 #include <image.h>
 #include <mtd.h>
 #include <spi_flash.h>
+#include <spi.h>
 
 extern enum bt_mode get_boot_mode(void);
 
@@ -390,9 +391,11 @@ int fpga_loadbitstream(int d, char *bitstream, size_t size, bitstream_type t)
 	const void *data = (const void *) bitstream;
 	struct spi_flash *flash = NULL;
 	enum m4_fw_state state;
+	struct udevice *bus = NULL, *slave = NULL;
 	struct hash hash;
 	int ret;
 
+	printf("probe qspi\n");
 	flash = spi_flash_probe(CONFIG_ENV_SPI_BUS, CONFIG_ENV_SPI_CS,
 				 CONFIG_ENV_SPI_MAX_HZ, CONFIG_ENV_SPI_MODE);
 	if (!flash) {
@@ -400,19 +403,25 @@ int fpga_loadbitstream(int d, char *bitstream, size_t size, bitstream_type t)
 		return -EIO;
 	}
 
+	spi_find_bus_and_cs(CONFIG_ENV_SPI_BUS, CONFIG_ENV_SPI_CS,
+			    &bus, &slave);
 #if defined(CONFIG_FIOVB)
+	printf("initializing fiovb ops\n");
 	sec = fiovb_ops_alloc(0);
 	if (!sec) {
 		printf("M4: cant allocate secure operations, rollback\n");
-		return -EIO;
+		ret = -EIO;
+		goto error;
 	}
 #else
+	printf("validating installed firmware\n");
 	ret = init_secure_hash(flash, size);
 	if (ret) {
 		printf("M4: cant validate the installed firmware\n");
-		return ret;
+		goto done;
 	}
 #endif
+	printf("getting the M4 state\n");
 	ret = m4_get_state(data, size, &hash, &state);
 
 	if (state == m4_fw_abort) {
@@ -425,18 +434,22 @@ int fpga_loadbitstream(int d, char *bitstream, size_t size, bitstream_type t)
 		ret = m4_do_upgrade(flash, data, size, &hash);
 		if (ret) {
 			printf("M4: upgrade failed, rollback\n");
-			return ret;
+			goto done;
 		}
-		goto boot;
-	}
+	} else
+		printf("M4: already installed\n");
 
-	printf("M4: already installed\n");
-boot:
 	ret = m4_boot(flash, size, &hash);
 done:
 #if defined(CONFIG_FIOVB)
 	fiovb_ops_free(sec);
 #endif
+error:
+	/* cleanup the specific bus driver (ie, fsl_qspi.c) */
+	if (bus && bus->driver && bus->driver->remove)
+		bus->driver->remove(bus);
+
+	spi_flash_free(flash);
+
 	return ret;
 }
-
