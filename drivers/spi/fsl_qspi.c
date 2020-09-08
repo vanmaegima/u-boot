@@ -93,6 +93,8 @@ struct fsl_qspi_devtype_data {
 	u32 txfifo;
 	u32 ahb_buf_size;
 	u32 driver_data;
+	void (*hw_lock_req)(bool on);
+	void (*hw_lock_lck)(bool on);
 };
 
 /**
@@ -152,6 +154,7 @@ static const struct fsl_qspi_devtype_data vybrid_data = {
 	.txfifo = 64,
 	.ahb_buf_size = 1024,
 	.driver_data = QUADSPI_QUIRK_SWAP_ENDIAN,
+	.hw_lock_lck = NULL,
 };
 
 static const struct fsl_qspi_devtype_data imx6sx_data = {
@@ -160,6 +163,7 @@ static const struct fsl_qspi_devtype_data imx6sx_data = {
 	.txfifo = 512,
 	.ahb_buf_size = 1024,
 	.driver_data = 0,
+	.hw_lock_lck = NULL,
 };
 
 static const struct fsl_qspi_devtype_data imx6ul_7d_data = {
@@ -168,7 +172,35 @@ static const struct fsl_qspi_devtype_data imx6ul_7d_data = {
 	.txfifo = 512,
 	.ahb_buf_size = 1024,
 	.driver_data = 0,
+	.hw_lock_lck = NULL,
 };
+
+#if CONFIG_FSL_QSPI_LOCK_REQ && CONFIG_FSL_QSPI_LOCK_LCK
+void imx7ulp_hw_lock_req(bool on)
+{
+	if (on) {
+		/* M4 must hold the lock */
+		while (readb(CONFIG_FSL_QSPI_LOCK_LCK) != 1);
+
+		/* request access */
+		do {
+			writeb(2, CONFIG_FSL_QSPI_LOCK_REQ);
+		} while (readb(CONFIG_FSL_QSPI_LOCK_REQ) != 2);
+	} else
+		writeb(0, CONFIG_FSL_QSPI_LOCK_REQ);
+}
+
+void imx7ulp_hw_lock_lck(bool on)
+{
+	if (on) {
+		/* request to lock */
+		do {
+			writeb(2, CONFIG_FSL_QSPI_LOCK_LCK);
+		} while (readb(CONFIG_FSL_QSPI_LOCK_LCK) != 2);
+	} else
+		writeb(0, CONFIG_FSL_QSPI_LOCK_LCK);
+}
+#endif
 
 static const struct fsl_qspi_devtype_data imx7ulp_data = {
 	.devtype = FSL_QUADSPI_IMX7ULP,
@@ -176,6 +208,12 @@ static const struct fsl_qspi_devtype_data imx7ulp_data = {
 	.txfifo = 64,
 	.ahb_buf_size = 128,
 	.driver_data = 0,
+#if CONFIG_FSL_QSPI_LOCK_REQ && CONFIG_FSL_QSPI_LOCK_LCK
+	.hw_lock_req = imx7ulp_hw_lock_req,
+	.hw_lock_lck = imx7ulp_hw_lock_lck,
+#else
+	.hw_lock_lck = NULL,
+#endif
 };
 
 static u32 qspi_read32(u32 flags, u32 *addr)
@@ -904,6 +942,16 @@ static int fsl_qspi_child_pre_probe(struct udevice *dev)
 	return 0;
 }
 
+static int fsl_qspi_remove(struct udevice *bus)
+{
+	struct fsl_qspi_priv *priv = dev_get_priv(bus);
+
+	if (priv->devtype_data->hw_lock_lck)
+		priv->devtype_data->hw_lock_lck(false);
+
+	return 0;
+}
+
 static int fsl_qspi_probe(struct udevice *bus)
 {
 	u32 amba_size_per_chip;
@@ -930,7 +978,8 @@ static int fsl_qspi_probe(struct udevice *bus)
 	priv->flash_num = plat->flash_num;
 	priv->num_chipselect = plat->num_chipselect;
 
-	priv->devtype_data = (struct fsl_qspi_devtype_data *)dev_get_driver_data(bus);
+	priv->devtype_data = (struct fsl_qspi_devtype_data *)
+			     dev_get_driver_data(bus);
 	if (!priv->devtype_data) {
 		printf("ERROR : No devtype_data found\n");
 		return -ENODEV;
@@ -943,11 +992,30 @@ static int fsl_qspi_probe(struct udevice *bus)
 		priv->devtype_data->ahb_buf_size,
 		priv->devtype_data->driver_data);
 
+	if (priv->devtype_data->hw_lock_lck &&
+		priv->devtype_data->hw_lock_req) {
+
+		priv->devtype_data->hw_lock_req(true);
+		priv->devtype_data->hw_lock_lck(true);
+		priv->devtype_data->hw_lock_req(false);
+		/*
+		 * pinmux (platform dependent)
+		 */
+		printf("fsl qspi: hw lock taken\n");
+		board_init();
+
+		/* clock _must_ stabilize */
+		udelay(300);
+	}
+
 	/* make sure controller is not busy anywhere */
 	ret = is_controller_busy(priv);
 
 	if (ret) {
 		debug("ERROR : The controller is busy\n");
+
+		if (priv->devtype_data->hw_lock_lck)
+			priv->devtype_data->hw_lock_lck(false);
 		return ret;
 	}
 
@@ -1167,4 +1235,5 @@ U_BOOT_DRIVER(fsl_qspi) = {
 	.priv_auto_alloc_size = sizeof(struct fsl_qspi_priv),
 	.probe	= fsl_qspi_probe,
 	.child_pre_probe = fsl_qspi_child_pre_probe,
+	.remove = fsl_qspi_remove,
 };

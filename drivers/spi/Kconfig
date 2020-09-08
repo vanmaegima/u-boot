@@ -380,6 +380,20 @@ config FSL_QSPI
 	  used to access the SPI NOR flash on platforms embedding this
 	  Freescale IP core.
 
+config FSL_QSPI_LOCK_LCK
+	hex "FSL QSPI hardware lock"
+	default 0x00000000
+	depends on FSL_QSPI
+	help
+	  The physical address of the lock
+
+config FSL_QSPI_LOCK_REQ
+	hex "FSL QSPI hardware lock request"
+	default 0x00000000
+	depends on FSL_QSPI
+	help
+	  The physical address of the lock
+
 config DAVINCI_SPI
 	bool "Davinci & Keystone SPI driver"
 	depends on ARCH_DAVINCI || ARCH_KEYSTONE
