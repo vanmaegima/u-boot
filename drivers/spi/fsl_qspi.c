@@ -93,6 +93,7 @@ struct fsl_qspi_devtype_data {
 	u32 txfifo;
 	u32 ahb_buf_size;
 	u32 driver_data;
+	bool (*hw_lock_enabled)(void);
 	void (*hw_lock_req)(bool on);
 	void (*hw_lock_lck)(bool on);
 };
@@ -154,7 +155,7 @@ static const struct fsl_qspi_devtype_data vybrid_data = {
 	.txfifo = 64,
 	.ahb_buf_size = 1024,
 	.driver_data = QUADSPI_QUIRK_SWAP_ENDIAN,
-	.hw_lock_lck = NULL,
+	.hw_lock_enabled = NULL,
 };
 
 static const struct fsl_qspi_devtype_data imx6sx_data = {
@@ -163,7 +164,7 @@ static const struct fsl_qspi_devtype_data imx6sx_data = {
 	.txfifo = 512,
 	.ahb_buf_size = 1024,
 	.driver_data = 0,
-	.hw_lock_lck = NULL,
+	.hw_lock_enabled = NULL,
 };
 
 static const struct fsl_qspi_devtype_data imx6ul_7d_data = {
@@ -172,10 +173,25 @@ static const struct fsl_qspi_devtype_data imx6ul_7d_data = {
 	.txfifo = 512,
 	.ahb_buf_size = 1024,
 	.driver_data = 0,
-	.hw_lock_lck = NULL,
+	.hw_lock_enabled = NULL,
 };
 
 #if CONFIG_FSL_QSPI_LOCK_REQ && CONFIG_FSL_QSPI_LOCK_LCK
+bool imx7ulp_hw_lock_enabled(void)
+{
+	u32 val = readl(PCC0_RBASE + 0x6C);
+
+	printf("fsl_qspi: clock 0x%x\n", val);
+
+	if (val & BIT(29)) {
+		printf("fsl_qspi: hw clock enabled by M4\n");
+		return true;
+	}
+
+	printf("fsl_qspi: hw clock NOT enabled by M4\n");
+	return false;
+}
+
 void imx7ulp_hw_lock_req(bool on)
 {
 	if (on) {
@@ -211,8 +227,9 @@ static const struct fsl_qspi_devtype_data imx7ulp_data = {
 #if CONFIG_FSL_QSPI_LOCK_REQ && CONFIG_FSL_QSPI_LOCK_LCK
 	.hw_lock_req = imx7ulp_hw_lock_req,
 	.hw_lock_lck = imx7ulp_hw_lock_lck,
+	.hw_lock_enabled = imx7ulp_hw_lock_enabled,
 #else
-	.hw_lock_lck = NULL,
+	.hw_lock_enabled = NULL,
 #endif
 };
 
@@ -946,8 +963,13 @@ static int fsl_qspi_remove(struct udevice *bus)
 {
 	struct fsl_qspi_priv *priv = dev_get_priv(bus);
 
-	if (priv->devtype_data->hw_lock_lck)
-		priv->devtype_data->hw_lock_lck(false);
+	if (priv->devtype_data->hw_lock_enabled) {
+		if (!priv->devtype_data->hw_lock_enabled())
+			return 0;
+
+		if (priv->devtype_data->hw_lock_lck)
+			priv->devtype_data->hw_lock_lck(false);
+	}
 
 	return 0;
 }
@@ -992,20 +1014,24 @@ static int fsl_qspi_probe(struct udevice *bus)
 		priv->devtype_data->ahb_buf_size,
 		priv->devtype_data->driver_data);
 
-	if (priv->devtype_data->hw_lock_lck &&
-		priv->devtype_data->hw_lock_req) {
 
-		priv->devtype_data->hw_lock_req(true);
-		priv->devtype_data->hw_lock_lck(true);
-		priv->devtype_data->hw_lock_req(false);
-		/*
-		 * pinmux (platform dependent)
-		 */
-		printf("fsl qspi: hw lock taken\n");
-		board_init();
+	if (priv->devtype_data->hw_lock_enabled &&
+	    priv->devtype_data->hw_lock_enabled()) {
+		if (priv->devtype_data->hw_lock_lck &&
+			priv->devtype_data->hw_lock_req) {
 
-		/* clock _must_ stabilize */
-		udelay(300);
+			priv->devtype_data->hw_lock_req(true);
+			priv->devtype_data->hw_lock_lck(true);
+			priv->devtype_data->hw_lock_req(false);
+			/*
+			 * pinmux (platform dependent)
+			 */
+			printf("fsl qspi: hw lock taken\n");
+			board_init();
+
+			/* clock _must_ stabilize */
+			udelay(300);
+		}
 	}
 
 	/* make sure controller is not busy anywhere */
