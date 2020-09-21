@@ -109,6 +109,9 @@ void board_m4_restart(void)
 	gpio_direction_output(reset, 0);
 	udelay(100);
 	gpio_set_value(reset, 1);
+	/* wait till resets */
+	while (true)
+	;
 }
 
 #if IS_ENABLED(CONFIG_OF_BOARD_SETUP)
