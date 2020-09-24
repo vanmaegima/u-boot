@@ -44,9 +44,9 @@
  */
 #define MEM_LAYOUT_ENV_SETTINGS \
 	"kernel_addr_r=0x80280000\0" \
-	"fdt_addr_r=0x83000000\0" \
+	"fdt_addr_r=0x83100000\0" \
 	"ramdisk_addr_r=0x8a000000\0" \
-	"scriptaddr=0x83100000\0"
+	"scriptaddr=0x83200000\0"
 
 #ifdef CONFIG_AHAB_BOOT
 #define AHAB_ENV "sec_boot=yes\0"
@@ -77,6 +77,7 @@
 	AHAB_ENV \
 	M4_BOOT_ENV \
 	MEM_LAYOUT_ENV_SETTINGS \
+	"bootcmd_mfg=fastboot 0\0" \
 	"boot_file=Image\0" \
 	"console=ttyLP1,115200\0" \
 	"fdt_addr=0x83000000\0"	\
@@ -106,7 +107,7 @@
 	"vidargs=video=imxdpufb5:off video=imxdpufb6:off video=imxdpufb7:off\0"
 
 /* Link Definitions */
-#define CONFIG_LOADADDR			0x80280000
+#define CONFIG_LOADADDR			0x89000000
 
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
 
@@ -170,15 +171,9 @@
 /* Networking */
 #define CONFIG_FEC_ENET_DEV 0
 
-#if (CONFIG_FEC_ENET_DEV == 0)
 #define IMX_FEC_BASE			0x5B040000
-#define CONFIG_FEC_MXC_PHYADDR          0x0
+#define CONFIG_FEC_MXC_PHYADDR          0x4
 #define CONFIG_ETHPRIME                 "eth0"
-#elif (CONFIG_FEC_ENET_DEV == 1)
-#define IMX_FEC_BASE			0x5B050000
-#define CONFIG_FEC_MXC_PHYADDR          0x1
-#define CONFIG_ETHPRIME                 "eth1"
-#endif
 
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define FEC_QUIRK_ENET_MAC

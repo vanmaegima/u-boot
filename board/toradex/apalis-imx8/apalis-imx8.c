@@ -69,6 +69,29 @@ static void setup_iomux_uart(void)
 	imx8_iomux_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
 }
 
+void board_mem_get_layout(uint64_t *phys_sdram_1_start,
+			  uint64_t *phys_sdram_1_size,
+			  uint64_t *phys_sdram_2_start,
+			  uint64_t *phys_sdram_2_size)
+{
+	uint32_t is_quadplus = 0, val = 0;
+	sc_err_t sciErr = sc_misc_otp_fuse_read(-1, 6, &val);
+
+	if (sciErr == SC_ERR_NONE) {
+		/* QP has one A72 core disabled */
+		is_quadplus = ((val >> 4) & 0x3) != 0x0;
+	}
+
+	*phys_sdram_1_start = PHYS_SDRAM_1;
+	*phys_sdram_1_size = PHYS_SDRAM_1_SIZE;
+	*phys_sdram_2_start = PHYS_SDRAM_2;
+	if (is_quadplus)
+		/* Our QP based SKUs only have 2 GB RAM (PHYS_SDRAM_1_SIZE) */
+		*phys_sdram_2_size = 0x0UL;
+	else
+		*phys_sdram_2_size = PHYS_SDRAM_2_SIZE;
+}
+
 int board_early_init_f(void)
 {
 	sc_pm_clock_rate_t rate = SC_80MHZ;
@@ -196,6 +219,37 @@ static pcb_rev_t get_pcb_revision(void)
 	}
 }
 
+static void select_dt_from_module_version(void)
+{
+	char *fdt_env = env_get("fdtfile");
+
+	switch(get_pcb_revision()) {
+		case PCB_VERSION_1_0:
+			if (strcmp(FDT_FILE_V1_0, fdt_env)) {
+				env_set("fdtfile", FDT_FILE_V1_0);
+				printf("Detected a V1.0 module, setting " \
+					"correct devicetree\n");
+#ifndef CONFIG_ENV_IS_NOWHERE
+				env_save();
+#endif
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+static int do_select_dt_from_module_version(cmd_tbl_t *cmdtp, int flag, int argc,
+		       char * const argv[]) {
+	select_dt_from_module_version();
+	return 0;
+}
+
+U_BOOT_CMD(
+	select_dt_from_module_version, CONFIG_SYS_MAXARGS, 1, do_select_dt_from_module_version,
+	"\n", "    - select devicetree from module version"
+);
+
 int board_init(void)
 {
 #ifdef CONFIG_MXC_GPIO
@@ -285,36 +339,7 @@ int board_late_init(void)
 #endif
 #endif /* CONFIG_IMX_LOAD_HDMI_FIMRWARE_RX || CONFIG_IMX_LOAD_HDMI_FIMRWARE_TX */
 
-	return 0;
-}
-
-static void select_dt_from_module_version(void)
-{
-	char *fdt_env = env_get("fdtfile");
-
-	switch(get_pcb_revision()) {
-		case PCB_VERSION_1_0:
-			if (strcmp(FDT_FILE_V1_0, fdt_env)) {
-				env_set("fdtfile", FDT_FILE_V1_0);
-				printf("Detected a V1.0 module, setting " \
-					"correct devicetree\n");
-#ifndef CONFIG_ENV_IS_NOWHERE
-				env_save();
-#endif
-			}
-			break;
-		default:
-			break;
-	}
-}
-
-static int do_select_dt_from_module_version(cmd_tbl_t *cmdtp, int flag, int argc,
-		       char * const argv[]) {
 	select_dt_from_module_version();
+
 	return 0;
 }
-
-U_BOOT_CMD(
-	select_dt_from_module_version, CONFIG_SYS_MAXARGS, 1, do_select_dt_from_module_version,
-	"\n", "    - select devicetree from module version"
-);
