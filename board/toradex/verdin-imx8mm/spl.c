@@ -17,6 +17,7 @@
 
 #include <power/pmic.h>
 #include <power/bd71837.h>
+#include <power/pca9450.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <fsl_esdhc_imx.h>
@@ -68,6 +69,8 @@ struct i2c_pads_info i2c_pad_info1 = {
 #define USDHC_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS | PAD_CTL_PUE | PAD_CTL_PE | \
 			 PAD_CTL_FSEL2)
 #define USDHC_GPIO_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_DSE1)
+#define USDHC_RESET_PAD_CTRL (PAD_CTL_DSE1 | PAD_CTL_HYS | PAD_CTL_PUE | \
+			      PAD_CTL_FSEL2 | PAD_CTL_PE)
 
 static iomux_v3_cfg_t const usdhc1_pads[] = {
 	IMX8MM_PAD_SD1_CLK_USDHC1_CLK | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -80,7 +83,8 @@ static iomux_v3_cfg_t const usdhc1_pads[] = {
 	IMX8MM_PAD_SD1_DATA5_USDHC1_DATA5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	IMX8MM_PAD_SD1_DATA6_USDHC1_DATA6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	IMX8MM_PAD_SD1_DATA7_USDHC1_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD1_STROBE_USDHC1_STROBE | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	IMX8MM_PAD_SD1_RESET_B_USDHC1_RESET_B | MUX_PAD_CTRL(USDHC_RESET_PAD_CTRL),
+	IMX8MM_PAD_SD1_STROBE_USDHC1_STROBE   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
 static iomux_v3_cfg_t const usdhc2_pads[] = {
@@ -164,6 +168,43 @@ int power_init_board(void)
 	struct pmic *p;
 	int ret;
 
+#ifdef CONFIG_POWER_PCA9450
+#ifdef CONFIG_POWER_BD71837
+	uint8_t is_bd71837 = 0;
+	ret = i2c_set_bus_num(I2C_PMIC);
+	if (!ret)
+		ret = i2c_read(0x4b, BD71837_REV, 1, &is_bd71837, 1);
+	/* BD71837_REV, High Nibble is major version, fix 1010 */
+	is_bd71837 = !ret && ((is_bd71837 & 0xf0) == 0xa0);
+	if (!is_bd71837) {
+#endif
+
+	ret = power_pca9450b_init(I2C_PMIC);
+	if (ret)
+		printf("power init failed\n");
+	p = pmic_get("PCA9450");
+	pmic_probe(p);
+
+	/* BUCKxOUT_DVS0/1 control BUCK123 output, clear PRESET_EN */
+	pmic_reg_write(p, PCA9450_BUCK123_DVS, 0x29);
+
+	/* increase VDD_DRAM to 0.975v for 1.5Ghz DDR */
+	pmic_reg_write(p, PCA9450_BUCK3OUT_DVS0, 0x1c);
+
+	/* set WDOG_B_CFG to cold reset */
+	pmic_reg_write(p, PCA9450_RESET_CTRL, 0xA1);
+
+	/* set CONFIG2 to enable the I2C level translator */
+	pmic_reg_write(p, PCA9450_CONFIG2, 0x1);
+
+	return 0;
+
+#ifdef CONFIG_POWER_BD71837
+	}
+#endif
+#endif /* CONFIG_POWER_PCA9450 */
+
+#ifdef CONFIG_POWER_BD71837
 	ret = power_bd71837_init(I2C_PMIC);
 	if (ret)
 		printf("power init failed");
@@ -190,6 +231,7 @@ int power_init_board(void)
 
 	/* lock the PMIC regs */
 	pmic_reg_write(p, BD71837_REGLOCK, 0x11);
+#endif
 
 	return 0;
 }

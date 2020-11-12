@@ -30,6 +30,8 @@
 #define CONFIG_NETMASK			255.255.255.0
 #define CONFIG_SERVERIP			192.168.10.1
 
+#define FEC_ENET_ENABLE_TXC_DELAY
+
 /**
  * SYS_SDRAM_BASE	0x80000000	0.125MiB
  * SYS_TEXT_BASE	0x80020000	2.375MiB
@@ -57,7 +59,7 @@
 /* Boot M4 */
 #define M4_BOOT_ENV \
 	"m4_0_image=m4_0.bin\0" \
-	"loadm4image_0=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} " \
+	"loadm4image_0=${load_cmd} ${loadaddr} " \
 		"${m4_0_image}\0" \
 	"m4boot_0=run loadm4image_0; dcache flush; bootaux ${loadaddr} 0\0" \
 
@@ -78,6 +80,7 @@
 	M4_BOOT_ENV \
 	MEM_LAYOUT_ENV_SETTINGS \
 	"bootcmd_mfg=fastboot 0\0" \
+	"boot_script_dhcp=boot.scr\0" \
 	"boot_file=Image\0" \
 	"console=ttyLP1,115200\0" \
 	"fdt_addr=0x83000000\0"	\
@@ -90,12 +93,6 @@
 		"root=PARTUUID=${uuid} rootwait " \
 	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
 	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp " \
-		"${vidargs}\0" \
-	"nfsboot=run netargs; dhcp ${loadaddr} ${image}; tftp ${fdt_addr} " \
-		"apalis-imx8x/${fdt_file}; booti ${loadaddr} - " \
-		"${fdt_addr}\0" \
 	"panel=NULL\0" \
 	"script=boot.scr\0" \
 	"setup=run mmcargs\0" \

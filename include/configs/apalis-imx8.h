@@ -62,8 +62,8 @@
 #define M4_BOOT_ENV \
 	"m4_0_image=m4_0.bin\0" \
 	"m4_1_image=m4_1.bin\0" \
-	"loadm4image_0=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${m4_0_image}\0" \
-	"loadm4image_1=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${m4_1_image}\0" \
+	"loadm4image_0=${load_cmd} ${loadaddr} ${m4_0_image}\0" \
+	"loadm4image_1=${load_cmd} ${loadaddr} ${m4_1_image}\0" \
 	"m4boot_0=run loadm4image_0; dcache flush; bootaux ${loadaddr} 0\0" \
 	"m4boot_1=run loadm4image_1; dcache flush; bootaux ${loadaddr} 1\0" \
 
@@ -90,6 +90,7 @@
 	BOOTENV \
 	M4_BOOT_ENV \
 	MEM_LAYOUT_ENV_SETTINGS \
+	"boot_script_dhcp=boot.scr\0" \
 	"bootcmd_mfg=select_dt_from_module_version && fastboot 0\0" \
 	"script=boot.scr\0" \
 	"boot_file=Image\0" \
@@ -99,17 +100,12 @@
 	"fdtfile=" FDT_FILE "\0" \
 	"finduuid=part uuid mmc ${mmcdev}:2 uuid\0" \
 	"hdp_file=hdmitxfw.bin\0" \
-	"loadhdp=fatload mmc ${mmcdev}:${mmcpart} ${hdp_addr} ${hdp_file}\0" \
+	"loadhdp=${load_cmd} ${hdp_addr} ${hdp_file}\0" \
 	"mmcautodetect=yes\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=PARTUUID=${uuid} rootwait " \
 	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
 	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp" \
-		"\0" \
-	"nfsboot=run netargs; dhcp ${loadaddr} ${image}; tftp ${fdt_addr_r} " \
-		"apalis-imx8/${fdtfile}; booti ${loadaddr} - ${fdt_addr_r}\0" \
 	"panel=NULL\0" \
 	"update_uboot=askenv confirm Did you load u-boot-dtb.imx (y/N)?; " \
 		"if test \"$confirm\" = \"y\"; then " \

@@ -39,6 +39,7 @@
 #define CONFIG_POWER
 #define CONFIG_POWER_I2C
 #define CONFIG_POWER_BD71837
+#define CONFIG_POWER_PCA9450
 
 #define CONFIG_SYS_I2C
 
@@ -69,8 +70,6 @@
 #define CONFIG_SERVERIP		192.168.10.1
 #endif /* CONFIG_CMD_NET */
 
-#define FDT_FILE "imx8mm-verdin-${variant}-${fdt_board}.dtb"
-
 #define MEM_LAYOUT_ENV_SETTINGS \
 	"fdt_addr_r=0x43000000\0" \
 	"kernel_addr_r=0x40000000\0" \
@@ -82,8 +81,6 @@
 
 /* Enable Distro Boot */
 #ifndef CONFIG_SPL_BUILD
-#undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND "setenv fdtfile " FDT_FILE " && run distro_bootcmd;"
 #define BOOT_TARGET_DEVICES(func) \
 	func(MMC, mmc, 1) \
 	func(MMC, mmc, 0) \
@@ -104,6 +101,7 @@
 	"fdt_board=dev\0" \
 	"initrd_addr=0x43800000\0" \
 	"initrd_high=0xffffffffffffffff\0" \
+	"boot_script_dhcp=boot.scr\0" \
 	"boot_file=Image\0" \
 	"setup=setenv setupargs console=${console},${baudrate} console=tty1 consoleblank=0 earlycon\0"
 

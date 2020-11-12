@@ -57,7 +57,7 @@
 /* Boot M4 */
 #define M4_BOOT_ENV \
 	"m4_0_image=m4_0.bin\0" \
-	"loadm4image_0=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} " \
+	"loadm4image_0=${load_cmd} ${loadaddr} " \
 		"${m4_0_image}\0" \
 	"m4boot_0=run loadm4image_0; dcache flush; bootaux ${loadaddr} 0\0" \
 
@@ -77,6 +77,7 @@
 	AHAB_ENV \
 	M4_BOOT_ENV \
 	MEM_LAYOUT_ENV_SETTINGS \
+	"boot_script_dhcp=boot.scr\0" \
 	"bootcmd_mfg=fastboot 0\0" \
 	"console=ttyLP3,115200 earlycon=lpuart32,0x5a090000,115200\0" \
 	"fdt_addr=0x83000000\0"	\
@@ -89,12 +90,6 @@
 		"root=PARTUUID=${uuid} rootwait " \
 	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
 	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp " \
-		"${vidargs}\0" \
-	"nfsboot=run netargs; dhcp ${loadaddr} ${image}; tftp ${fdt_addr} " \
-		"colibri-imx8x/${fdt_file}; booti ${loadaddr} - " \
-		"${fdt_addr}\0" \
 	"panel=NULL\0" \
 	"script=boot.scr\0" \
 	"setup=run mmcargs\0" \
