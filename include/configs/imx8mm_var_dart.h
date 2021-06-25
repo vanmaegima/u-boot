@@ -35,6 +35,7 @@
 #define CONFIG_POWER_I2C
 #define CONFIG_POWER_BD71837
 
+#undef CONFIG_DM_I2C
 #define CONFIG_SYS_I2C
 
 #endif
@@ -226,10 +227,6 @@
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
 
 #define CONFIG_SYS_MMC_IMG_LOAD_PART	1
-
-#ifndef CONFIG_DM_I2C
-#define CONFIG_SYS_I2C
-#endif
 
 #define CONFIG_SYS_I2C_SPEED		100000
 
