@@ -3,3 +3,15 @@
 &uart4 {
 	u-boot,dm-spl;
 };
+
+&pmic {
+	u-boot,dm-spl;
+
+	regulators {
+		u-boot,dm-spl;
+	};
+};
+
+&pinctrl_pmic {
+	u-boot,dm-spl;
+};
