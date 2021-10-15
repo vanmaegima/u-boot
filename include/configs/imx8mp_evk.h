@@ -190,6 +190,7 @@
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		SZ_32M
+#define CONFIG_SYS_BOOTM_LEN		SZ_64M
 
 /* Totally 6GB DDR */
 #define CONFIG_SYS_SDRAM_BASE		0x40000000
