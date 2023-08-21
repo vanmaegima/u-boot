@@ -75,4 +75,7 @@ static inline bool valid_container_hdr(struct container_hdr *container)
 	return container->tag == CONTAINER_HDR_TAG &&
 	       container->version == CONTAINER_HDR_VERSION;
 }
+
+bool check_secondary_cnt_set(unsigned long *set_off);
+
 #endif
